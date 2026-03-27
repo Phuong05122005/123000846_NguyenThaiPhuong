@@ -249,6 +249,7 @@ try:
     )
 except ModuleNotFoundError as e:
     if "openpyxl" in str(e):
-        st.warning("Môi trường chưa cài `openpyxl`, nên không thể xuất XLSX. Vui lòng chạy `pip install openpyxl` rồi reload.")
+        # Bỏ qua xuất XLSX nếu không có openpyxl mà không show cảnh báo
+        pass
     else:
         raise
