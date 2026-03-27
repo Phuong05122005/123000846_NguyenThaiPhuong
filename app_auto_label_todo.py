@@ -10,6 +10,7 @@ Hướng dẫn:
 """
 
 import re
+import io
 import streamlit as st
 import pandas as pd
 # TODO 1: Import hai hàm word_tokenize và sentiment từ thư viện underthesea
@@ -218,15 +219,36 @@ st.dataframe(df[display_cols], use_container_width=True)
 output_df = df[display_cols].copy()
 output_df = output_df.astype(str)   # Đảm bảo mọi cột đều là text
 
-csv_data = output_df.to_csv(
-    index=False, 
-    encoding="utf-8-sig"   # Quan trọng nhất: utf-8-sig (có BOM) để Excel đọc đúng
-)
+# Xuất CSV ở dạng bytes, bao gồm BOM để Windows Excel nhận diện UTF-8 chính xác
+csv_bytes = output_df.to_csv(
+    index=False,
+    encoding="utf-8-sig",
+    sep=","
+).encode("utf-8-sig")
 
 st.download_button(
     label="⬇ Tải về file kết quả (CSV - hỗ trợ tiếng Việt)",
-    data=csv_data,
+    data=csv_bytes,
     file_name="auto_labels_output.csv",
-    mime="text/csv",
-    help="Mở bằng Excel: File → Import → chọn UTF-8 hoặc mở trực tiếp thường sẽ đúng font"
+    mime="text/csv; charset=utf-8",
+    help="Mở bằng Excel: Data → From Text/CSV → chọn UTF-8; Hoặc dùng LibreOffice/Google Sheets để hiển thị đúng"
 )
+
+# Tùy chọn bổ sung: xuất Excel trực tiếp để tránh lỗi mã hóa hoàn toàn
+try:
+    excel_bytes = io.BytesIO()
+    output_df.to_excel(excel_bytes, index=False, sheet_name="Kết quả")
+    excel_bytes.seek(0)
+
+    st.download_button(
+        label="⬇ Tải về file kết quả (XLSX - không lỗi mã hóa)",
+        data=excel_bytes,
+        file_name="auto_labels_output.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        help="Mở trực tiếp với Excel để tránh tất cả vấn đề mã hóa CSV"
+    )
+except ModuleNotFoundError as e:
+    if "openpyxl" in str(e):
+        st.warning("Môi trường chưa cài `openpyxl`, nên không thể xuất XLSX. Vui lòng chạy `pip install openpyxl` rồi reload.")
+    else:
+        raise
